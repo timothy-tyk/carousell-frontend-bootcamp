@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
-
+import { useAuth0 } from "@auth0/auth0-react";
 import { BACKEND_URL } from "../constants.js";
 
 const Listing = () => {
@@ -17,6 +17,7 @@ const Listing = () => {
         setListing(response.data);
       });
     }
+
     // Only run this effect on change to listingId
   }, [listingId]);
 
@@ -35,11 +36,30 @@ const Listing = () => {
       );
     }
   }
+  const { user, isAuthenticated, getAccessTokenSilently, loginWithRedirect } =
+    useAuth0();
 
-  const handleClick = () => {
-    axios.put(`${BACKEND_URL}/listings/${listingId}/buy`).then((response) => {
-      setListing(response.data);
+  const handleClick = async () => {
+    console.log(isAuthenticated);
+    if (isAuthenticated) {
+      console.log("user:", user);
+    } else {
+      loginWithRedirect();
+    }
+    const accessToken = await getAccessTokenSilently({
+      audience: process.env.REACT_APP_AUDIENCE,
+      scope: process.env.REACT_APP_SCOPE,
     });
+
+    const response = await axios.put(
+      `${BACKEND_URL}/listings/${listingId}/buy`,
+      {
+        buyerEmail: user.email,
+      },
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    console.log("data", response.data);
+    setListing(response.data);
   };
 
   return (
